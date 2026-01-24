@@ -33,6 +33,20 @@ public class EmailNotificationChannel implements NotificationChannel{
     public void send(NotificationRequest request) {
 
         try {
+            // Send admin notification (existing behavior)
+            sendAdminEmail(request);
+
+            // Send customer acknowledgement (new)
+            sendAcknowledgementEmail(request);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendAdminEmail(NotificationRequest request) {
+
+        try {
             String body = processTemplate(
                     request.getTemplate(),
                     request.getData()
@@ -49,6 +63,31 @@ public class EmailNotificationChannel implements NotificationChannel{
         } catch (Exception e) {
             throw new RuntimeException("Failed to send email", e);
         }
+    }
+
+    private void sendAcknowledgementEmail(NotificationRequest request) throws Exception {
+
+        Map<String, Object> data = request.getData();
+
+        // Safety check: if customer email is missing, skip acknowledgement
+        if (data == null || !data.containsKey("email")) {
+            return;
+        }
+
+        String customerEmail = data.get("email").toString();
+
+        String body = processTemplate(
+                "acknowledgement-email",
+                data
+        );
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(customerEmail);
+        message.setSubject("We have received your query");
+        message.setText(body);
+
+        mailSender.send(message);
     }
 
 
